@@ -2,6 +2,6 @@ services:
   - type: web
     name: customer-churn-india-api
     runtime: python
-    buildCommand: pip install -r requirements.txt && python src/generate_data.py && python src/train.py
+    buildCommand: pip install -r requirements.txt && python src/generate_data.py && python src/train.py && python src/explain.py
     startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health

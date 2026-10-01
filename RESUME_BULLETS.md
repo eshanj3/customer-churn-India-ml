@@ -1,13 +1,12 @@
 # Resume Bullets
 
-Live: [LOVABLE_URL] | GitHub: https://github.com/eshanj3/customer-churn-India-ml
+GitHub: https://github.com/eshanj3/customer-churn-India-ml  
+Figma: https://www.figma.com/design/ORVtXABGbmEPXOWJIv7s82
 
-- Identified 65.28% of churners with 24.50% PR-AUC on a 1,200-customer holdout, enabling risk-based retention prioritization through a leakage-controlled SQL + sklearn pipeline.
+- Built a leakage-controlled customer churn pipeline for a synthetic Indian subscription business, achieving 66.69% ROC-AUC and 37.16% PR-AUC on a 1,200-customer untouched holdout using SQL window features and class-balanced Logistic Regression.
 
-Live: [LOVABLE_URL] | GitHub: https://github.com/eshanj3/customer-churn-India-ml
+- Engineered behavioral features with SQLite LAG and rolling windows, compared Logistic Regression, Random Forest and XGBoost using five-fold CV, and selected the final model by validation-safe CV PR-AUC rather than test-set performance.
 
-- Identified a top-20% risk audience containing 34.7% of observed churners, using SQL-engineered recency, frequency, rolling usage, tenure, and recharge-behavior features.
+- Optimized the retention decision threshold against intervention economics, targeting 34.48% of validation customers, capturing 119 churners, and generating ₹2,565 validation net expected value under explicit business assumptions.
 
-Live: [LOVABLE_URL] | GitHub: https://github.com/eshanj3/customer-churn-India-ml
-
-- Identified a -₹12,165 net expected value under the initial retention assumptions, demonstrating how model thresholds must be evaluated against intervention economics rather than ML metrics alone.
+- Productionized the model with FastAPI endpoints for health, metrics, ROI, SHAP explainability and prediction, plus a Streamlit dashboard and GitHub Actions CI for reproducible training and testing.

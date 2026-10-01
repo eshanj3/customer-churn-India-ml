@@ -27,14 +27,13 @@ agg AS (
         AVG(days_since_recharge) AS avg_days_since_recharge,
         MAX(days_since_recharge) AS max_days_since_recharge,
         AVG(recharge_amount_inr) AS avg_recharge_amount_inr,
-        COUNT(*) AS recharge_frequency,
+        SUM(CASE WHEN days_since_recharge <= 10 THEN 1 ELSE 0 END) AS recharge_frequency,
         AVG(rolling_3m_data_gb) AS avg_rolling_3m_data_gb,
-        SUM(CASE WHEN month_index >= 4 AND data_gb > prev_data_gb
+        SUM(CASE WHEN month_index >= 2 AND data_gb > prev_data_gb
                  THEN 1 ELSE 0 END) AS usage_increase_months,
-        AVG(data_gb - COALESCE(prev_data_gb, data_gb))
-            AS avg_monthly_data_delta,
-        MAX(rolling_3m_recharge_recency)
-            AS max_rolling_recharge_recency
+        AVG(CASE WHEN month_index = 1 THEN 0.0
+                 ELSE data_gb - prev_data_gb END) AS avg_monthly_data_delta,
+        MAX(rolling_3m_recharge_recency) AS max_rolling_recharge_recency
     FROM ordered
     GROUP BY customer_id
 )
@@ -42,10 +41,8 @@ SELECT
     c.customer_id,
     c.city,
     CASE
-        WHEN c.city IN ('Mumbai','Delhi','Bengaluru','Hyderabad','Pune')
-            THEN 1
-        WHEN c.city IN ('Jaipur','Lucknow','Indore')
-            THEN 2
+        WHEN c.city IN ('Mumbai','Delhi','Bengaluru','Hyderabad','Pune') THEN 1
+        WHEN c.city IN ('Jaipur','Lucknow','Indore') THEN 2
         ELSE 3
     END AS city_tier,
     c.plan_name,

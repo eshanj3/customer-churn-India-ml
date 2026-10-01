@@ -1,4 +1,5 @@
 seed: 42
+pipeline_version: "2026.10"
 source:
   customer_csv: data/customers.csv
   monthly_csv: data/customer_monthly_usage.csv
@@ -6,10 +7,11 @@ model:
   test_size: 0.20
   validation_size: 0.20
   cv_folds: 5
+  selection_metric: cv_pr_auc_mean
   decision_threshold: 0.50
 business:
   monthly_margin_inr: 300
-  retention_cost_inr: 80
+  retention_cost_inr: 30
   save_probability_if_targeted: 0.35
 roi:
   threshold_start: 0.05

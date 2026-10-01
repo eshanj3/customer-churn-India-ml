@@ -14,6 +14,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, average_precision_score
 from xgboost import XGBClassifier
+import matplotlib.pyplot as plt
 from sql_features import build_feature_table
 from roi import optimize_threshold
 
@@ -120,6 +121,18 @@ def main():
         "model_name": selected,
         "decision_threshold": float(best["threshold"]),
     }, "models/churn_model.joblib")
+    plt.figure(figsize=(8, 4.5))
+    plt.plot(roi_table["threshold"], roi_table["net_expected_value_inr"], linewidth=2)
+    plt.axvline(float(best["threshold"]), linestyle="--", label=f"Optimal = {best['threshold']:.2f}")
+    plt.xlabel("Decision threshold")
+    plt.ylabel("Net expected value (₹)")
+    plt.title("Retention ROI by Churn Decision Threshold")
+    plt.legend()
+    plt.tight_layout()
+    Path("assets").mkdir(exist_ok=True)
+    plt.savefig("assets/hero.png", dpi=180, bbox_inches="tight")
+    plt.close()
+
     print(json.dumps(payload, indent=2))
 
 if __name__ == "__main__":

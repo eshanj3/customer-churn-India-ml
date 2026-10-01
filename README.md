@@ -1,202 +1,119 @@
-# Customer Churn Prediction for an Indian Subscription Business — predict and prioritize churners before they leave.
+# Customer Churn Prediction for an Indian Subscription Business
 
-Live App: [LOVABLE_URL_PENDING] | GitHub: https://github.com/eshanj3/customer-churn-India-ml
+A hiring-grade ML portfolio project combining SQL feature engineering, imbalanced classification, validation-safe model selection, ROI threshold optimization, SHAP explainability, FastAPI serving, and a Streamlit dashboard.
 
-![ROI threshold hero](assets/hero.png)
+GitHub: https://github.com/eshanj3/customer-churn-India-ml  
+Figma: https://www.figma.com/design/ORVtXABGbmEPXOWJIv7s82
 
-## Top 3 Findings
+> The dataset is intentionally seeded synthetic data. Performance numbers are reproducible project results, not evidence of real-world telecom performance.
 
-1. The validated Logistic Regression baseline achieved **65.57% ROC-AUC**, **24.50% PR-AUC**, **65.28% recall**, and **34.33% F1** on a 1,200-customer untouched test set.
-2. The top-20% risk audience contained **34.7% of observed churners**, showing how probability ranking can concentrate retention activity.
-3. Under the documented initial assumptions, the top-20% retention scenario produced **₹7,035 gross expected value**, **₹19,200 intervention cost**, and **-₹12,165 net expected value**. The project therefore optimizes the intervention threshold for economics instead of hiding an unfavorable business case.
+## Current verified run
 
-> These figures come from the validated project evaluation described in the repository. Run `python src/train.py` to regenerate the evaluation artifacts after changing the generator, model, or business assumptions.
+| Item | Result |
+|---|---:|
+| Model | Logistic Regression |
+| Test customers | 1,200 |
+| Test churn rate | 23.42% |
+| Precision | 36.76% |
+| Recall | 50.89% |
+| F1 | 42.69% |
+| ROC-AUC | 66.69% |
+| PR-AUC | 37.16% |
+| Validation ROI threshold | 0.57 |
+| Validation targeted share | 34.48% |
+| Validation captured churners | 119 |
+| Validation net expected value | ₹2,565 |
+| Model version | 2026.10-75a1e2145375 |
 
-## Business problem
+Model selection is based on five-fold cross-validation PR-AUC, with CV recall and F1 as tie-breakers. The validation set is used to optimize the retention threshold. The untouched test set is used only for the final reported evaluation.
 
-An Indian telecom/OTT subscription business wants to identify customers who are likely to churn early enough to justify a retention intervention. The objective is not simply to maximize classification accuracy: missed churners have an opportunity cost, while unnecessary offers waste retention budget.
+## Architecture
 
-## Data
+Raw customer and monthly usage data flow through SQLite SQL window features into a train/validation/test ML pipeline. Model candidates are compared, the operating threshold is optimized on validation data, the selected pipeline is refit on train plus validation, and the untouched test set is evaluated once. The final artifact is versioned and served through FastAPI.
 
-The repository uses a **seeded synthetic dataset** so the complete project can be reproduced without redistributing a third-party Kaggle dataset. It contains Jio/Airtel/Vi-style plans, OTT plans, UPI/card/manual recharge behavior, and Tier-1/2/3 Indian cities.
+## API
 
-The generator creates 6,000 customers with six monthly usage observations each.
+| Endpoint | Purpose | UI |
+|---|---|---|
+| GET /health | API and model status | Overview, Model Health |
+| GET /metrics | Holdout metrics and selected threshold | Overview, Model Health |
+| GET /roi | Assumptions, optimal threshold and threshold curve | ROI Optimizer |
+| GET /explainability?top_n=10 | Global SHAP drivers | Explainability |
+| POST /predict | Individual churn probability and reasons | Customer Scoring |
+
+Full request/response details are in docs/API.md.
 
 ## SQL feature engineering
 
-Raw customer and monthly usage data are loaded into SQLite and transformed in SQL using:
-
-- tenure buckets
-- `LAG()` usage deltas
-- rolling three-month usage averages
-- rolling recharge-recency averages
-- recharge frequency
-- average and maximum recharge recency
-- monthly usage trend
-- support-ticket counts
-- city tier
-
-The model never calculates these behavioral aggregates directly from the raw CSVs in Python.
+sql/features.sql uses SQLite LAG and rolling windows to derive tenure buckets, usage deltas, rolling three-month data usage, recharge recency, recharge frequency, usage-increase months, and other behavioral aggregates. The Python model consumes the SQL-generated feature table.
 
 ## Modeling
 
-The project compares:
-
+Compared candidates:
 - Logistic Regression with class-balanced training
 - Random Forest with class-balanced training
-- XGBoost
+- XGBoost with positive-class weighting
 
-A stratified train/validation/test split is used, followed by five-fold cross-validation on the training partition.
+Model selection is performed from training data using five-fold CV. Test metrics are never used to choose the model.
 
-The selected model is Logistic Regression because the documented evaluation emphasizes recall and PR-AUC while preserving a transparent and deployable model.
+## ROI optimization
 
-## Metrics and business cost
+The threshold sweep evaluates 0.05 to 0.90 using:
 
-The positive class is churn.
+Net Expected Value = Captured Churners × Save Probability × Monthly Margin − Targeted Customers × Intervention Cost
 
-**Recall matters because a missed churner represents a customer the retention team never gets an opportunity to save. Precision matters because false positives consume intervention budget. PR-AUC is particularly informative for an imbalanced churn problem.**
-
-Final validated holdout:
-
-| Metric | Result |
-|---|---:|
-| Test customers | 1,200 |
-| Test churn rate | 16.08% |
-| Precision | 23.29% |
-| Recall | 65.28% |
-| F1 | 34.33% |
-| ROC-AUC | 65.57% |
-| PR-AUC | 24.50% |
-
-## ROI threshold optimization
-
-The operating threshold is not assumed to be 0.50.
-
-Validation-set probabilities are swept from 0.05 to 0.90. For each threshold the pipeline calculates:
-
-`Net Expected Value = Captured Churners × Save Probability × Monthly Margin − Targeted Customers × Intervention Cost`
-
-The default assumptions are:
-
+Current documented assumptions:
 - monthly contribution margin: ₹300
-- retention intervention cost: ₹80
-- probability a targeted churner is successfully retained: 35%
+- intervention cost: ₹30
+- successful-retention probability if targeted: 35%
 
-The optimal threshold is selected **only on validation data**. The test set is then evaluated once using that frozen threshold.
-
-Generated artifacts:
-
-- `reports/roi_thresholds.csv`
-- `reports/roi_optimal.json`
-- `reports/test_metrics.json`
+The current validation optimum is threshold 0.57, targeting 34.48% of validation customers and capturing 119 observed churners for ₹2,565 validation net expected value.
 
 ## Explainability
 
-SHAP is used to calculate global feature importance for the fitted Logistic Regression pipeline.
+SHAP creates global feature-importance outputs at reports/shap_top_features.csv and assets/shap_summary.png. The API maps technical feature names to human-readable labels. mean_abs_shap describes importance magnitude and should not be interpreted as causality or individual directional effect.
 
-Run:
+## EDA
 
-```bash
-python src/explain.py
-```
+Run python src/eda.py to generate the churn distribution, churn-by-plan, churn-by-tenure visuals and reports/eda_summary.json.
 
-Outputs:
+## Local run
 
-- `reports/shap_top_features.csv`
-- `assets/shap_summary.png`
+    python -m venv .venv
+    .venv\Scripts\Activate.ps1
+    pip install -r requirements.txt
+    python src/generate_data.py
+    python src/eda.py
+    python src/sql_features.py
+    python src/train.py
+    python src/explain.py
+    pytest -q
+    uvicorn src.api:app --host 0.0.0.0 --port 8000
 
-Business-readable prediction reasons are also returned by the FastAPI endpoint.
+Run the dashboard separately:
 
-## Leakage prevention
+    streamlit run src/app.py
 
-- The churn label is excluded from feature calculations.
-- Behavioral features use only the defined observation window.
-- Train/validation/test splitting happens before model fitting.
-- The final test set is untouched during model and threshold selection.
-- Preprocessing is fitted inside an sklearn Pipeline.
-- ROI threshold selection uses validation predictions only.
-- No future churn outcome is used as a model feature.
+Swagger: http://localhost:8000/docs
 
 ## Deployment
 
-### FastAPI on Render
+render.yaml rebuilds the reproducible data, EDA, model and SHAP artifacts during deployment and starts FastAPI with /health as the health check.
 
-The repository includes `render.yaml`.
-
-Build command:
-
-```bash
-pip install -r requirements.txt && python src/generate_data.py && python src/train.py && python src/explain.py
-```
-
-Start command:
-
-```bash
-uvicorn src.api:app --host 0.0.0.0 --port $PORT
-```
-
-Health endpoint:
-
-```text
-/health
-```
-
-Prediction endpoint:
-
-```text
-POST /predict
-```
-
-### Lovable UI
-
-A polished frontend is being built in the Lovable project **Churn Guardian**. The frontend is designed to call the FastAPI `/predict` endpoint and show churn probability, the frozen intervention threshold, top reasons, and retention economics.
-
-## Local Streamlit UI
-
-```bash
-streamlit run src/app.py
-```
-
-## Reproducibility
-
-```bash
-python -m venv .venv
-# Windows
-.venv\\Scripts\\Activate.ps1
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-
-python src/generate_data.py
-python src/sql_features.py
-python src/train.py
-python src/explain.py
-pytest -q
-
-uvicorn src.api:app --host 0.0.0.0 --port 8000
-```
-
-## Model card
-
-See [model_card.md](model_card.md).
-
-## Limitations
-
-This is a methodology and portfolio demonstration using synthetic data. The reported performance should not be interpreted as expected performance on a real telecom subscriber population. Business value depends on the assumed margin, intervention cost, and successful-retention probability. Real deployment would require calibration, drift monitoring, subgroup analysis, experiment-based uplift measurement, and governance around customer targeting.
+.github/workflows/ci.yml runs the same pipeline and tests on pushes and pull requests.
 
 ## Repository structure
 
-```text
-assets/             Evaluation/SHAP visuals
-data/               Generated datasets
-models/             Serialized trained pipeline
-reports/            Metrics, model comparison, ROI and SHAP outputs
-sql/                Schema and SQL feature engineering
-src/                Data generation, SQL, training, ROI, SHAP, API, UI
-tests/              Preprocessing tests
-config.yaml         Model and business assumptions
-model_card.md       Model documentation
-RESUME_BULLETS.md   Resume variants
-render.yaml         Render deployment configuration
-```
+    assets/
+    data/
+    models/
+    reports/
+    sql/
+    src/
+    tests/
+    docs/
+    .github/workflows/
+    config.yaml
+    model_card.md
+    RESUME_BULLETS.md
+    render.yaml

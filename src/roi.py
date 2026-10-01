@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from pathlib import Path
 import json
 import numpy as np
@@ -25,7 +24,7 @@ def evaluate_thresholds(
         rows.append({
             "threshold": float(threshold),
             "targeted_customers": targeted_n,
-            "targeted_share": targeted_n / len(y_true),
+            "targeted_share": targeted_n / len(y_true) if len(y_true) else 0,
             "captured_churners": captured,
             "recall": captured / total_churners if total_churners else 0,
             "precision": captured / targeted_n if targeted_n else 0,
@@ -43,7 +42,7 @@ def optimize_threshold(y_true, probability, config_path="config.yaml"):
         cfg["roi"]["threshold_step"],
     ), 2)
     table = evaluate_thresholds(
-        y_true, probability,
+        np.asarray(y_true), np.asarray(probability),
         cfg["business"]["monthly_margin_inr"],
         cfg["business"]["retention_cost_inr"],
         cfg["business"]["save_probability_if_targeted"],

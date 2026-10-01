@@ -4,6 +4,7 @@ setup:
 
 data:
 	python src/generate_data.py
+	python src/eda.py
 	python src/sql_features.py
 
 train:
@@ -20,3 +21,11 @@ api:
 
 ui:
 	streamlit run src/app.py
+
+all:
+	python src/generate_data.py
+	python src/eda.py
+	python src/sql_features.py
+	python src/train.py
+	python src/explain.py
+	pytest -q
